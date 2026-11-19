@@ -413,30 +413,32 @@ Tamén se comprobou o espazo ocupado:
 hdfs dfs -du -h e5
 ```
 
-**Resultados:**
-
-- O ficheiro mantén os seus 5 bloques.
-- Cada bloque pasa a ter 2 réplicas.
-- A replicación media indicada por `fsck` é 2.0.
-- Non hai bloques infrarreplicados, perdidos nin corruptos.
-- O estado do sistema de ficheiros é `HEALTHY`.
-- O tamaño lóxico segue sendo de 64 MiB, pero a ocupación total pasa a 128 MiB.
 
 **Capturas:**
 
-![Saída de fsck coa replicación 2](img/c3_replica2_fsck.png)
+![Estado replicacion 1](img/replic31.png)
+![Estado replicacion 2](img/replic_31b.png)
 
-![Saída de du -h coa replicación 2](img/c3_replica2_du.png)
+**Resultados:**
+
+Nas capturas observamos o seguinte:
+
+- O ficheiro mantén os seus 5 bloques (Total blocks (validated) na segunda captura).
+- Cada bloque pasa a ter 2 réplicas (Average block replication).
+- Non hai bloques infrarreplicados, perdidos nin corruptos.
+- O estado do sistema de ficheiros é `HEALTHY`.
+- O tamaño lóxico segue sendo de 64 MiB, pero a ocupación total pasa a 128 MiB. Diminúe 1/3 da súa capacidade porque se restan os 64 MiB da terceira réplica (antes ocupaba 192 MiB.)
+
 
 ### 4.2. Solicitar máis réplicas que DataNodes dispoñibles
 
-O clúster ten 14 DataNodes, segundo se comprobou no apartado C2. Polo tanto, solicitouse unha replicación de 15:
+O clúster ten 14 DataNodes, como se pode ver en Number of Data Nodes da última captura. Polo tanto, solicitouse unha replicación de 15 para que non houbese dispoñibilidade.
+
+Primeiro executouse:
 
 ```bash
 hdfs dfs -setrep 15 e5/historico_16m.csv
 ```
-
-Non se utilizou a opción `-w`, para evitar que o comando quedase agardando indefinidamente.
 
 Despois executouse:
 
@@ -450,21 +452,21 @@ E consultouse novamente a ocupación:
 hdfs dfs -du -h e5
 ```
 
+**Capturas:**
+
+![Saída de fsck solicitando 15 réplicas](img/replic32_fsck.png)
+
 **Resultados:**
 
 - HDFS recibiu a solicitude de 15 réplicas.
-- Como o clúster só ten 14 DataNodes, cada bloque conseguiu un máximo de 14 réplicas activas.
-- `fsck` indica nos cinco bloques que o obxectivo é 15, pero que só existen 14 réplicas activas.
-- Os 5 bloques aparecen como `under-replicated` (100 %).
-- Non hai bloques perdidos nin corruptos.
+- Só se puideron crear 14 réplicas activas (Average block replication = 14 na última captura).
+- `fsck` indica nos cinco bloques que o obxectivo é 15, pero que só existen 14 réplicas activas. *Target replicas is 15 but found 14 live replicas*.
+- Os 5 bloques aparecen como `under-replicated` (100 %). Teñen menos réplicas que as solicitadas.
+- Non hai bloques perdidos nin corruptos, e o estado é HEALTY.
 - O estado global continúa sendo `HEALTHY`.
 - A saída de `du -h` mostra 64 MiB de tamaño lóxico e 960 MiB de ocupación total para este ficheiro.
 
-**Capturas:**
 
-![Saída de fsck solicitando 15 réplicas](img/c3_replica15_fsck.png)
-
-![Saída de du -h solicitando 15 réplicas](img/c3_replica15_du.png)
 
 ### 4.3. Restaurar a replicación a 3
 
