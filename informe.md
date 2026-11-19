@@ -388,3 +388,264 @@ A realización desta proba permitiu comprobar como HDFS divide os ficheiros en b
 Tamén se comprobou que cada bloque ten tres réplicas distribuídas entre diferentes DataNodes. O resumo de `fsck` confirma que o clúster dispón de 14 DataNodes e que os ficheiros están en estado `HEALTHY`, sen bloques corruptos nin réplicas ausentes.
 
 Finalmente, a consulta de espazo ocupado permitiu observar a diferenza entre o tamaño lóxico dos ficheiros e o espazo total utilizado ao manter tres copias de cada bloque.
+
+## Apartado 4. Replicación
+
+Neste apartado comprobouse o comportamento de HDFS ao modificar o factor de replicación dun ficheiro. Traballouse co ficheiro `e5/historico_16m.csv`, que inicialmente tiña un factor de replicación de 3.
+
+### 4.1. Reducir a replicación a 2
+
+Executouse o seguinte comando:
+
+```bash
+hdfs dfs -setrep 2 e5/historico_16m.csv
+```
+
+A continuación, consultáronse os bloques e as súas localizacións:
+
+```bash
+hdfs fsck /user/xuedua072/e5/historico_16m.csv -files -blocks -locations
+```
+
+Tamén se comprobou o espazo ocupado:
+
+```bash
+hdfs dfs -du -h e5
+```
+
+**Resultados:**
+
+- O ficheiro mantén os seus 5 bloques.
+- Cada bloque pasa a ter 2 réplicas.
+- A replicación media indicada por `fsck` é 2.0.
+- Non hai bloques infrarreplicados, perdidos nin corruptos.
+- O estado do sistema de ficheiros é `HEALTHY`.
+- O tamaño lóxico segue sendo de 64 MiB, pero a ocupación total pasa a 128 MiB.
+
+**Capturas:**
+
+![Saída de fsck coa replicación 2](img/c3_replica2_fsck.png)
+
+![Saída de du -h coa replicación 2](img/c3_replica2_du.png)
+
+### 4.2. Solicitar máis réplicas que DataNodes dispoñibles
+
+O clúster ten 14 DataNodes, segundo se comprobou no apartado C2. Polo tanto, solicitouse unha replicación de 15:
+
+```bash
+hdfs dfs -setrep 15 e5/historico_16m.csv
+```
+
+Non se utilizou a opción `-w`, para evitar que o comando quedase agardando indefinidamente.
+
+Despois executouse:
+
+```bash
+hdfs fsck /user/xuedua072/e5/historico_16m.csv
+```
+
+E consultouse novamente a ocupación:
+
+```bash
+hdfs dfs -du -h e5
+```
+
+**Resultados:**
+
+- HDFS recibiu a solicitude de 15 réplicas.
+- Como o clúster só ten 14 DataNodes, cada bloque conseguiu un máximo de 14 réplicas activas.
+- `fsck` indica nos cinco bloques que o obxectivo é 15, pero que só existen 14 réplicas activas.
+- Os 5 bloques aparecen como `under-replicated` (100 %).
+- Non hai bloques perdidos nin corruptos.
+- O estado global continúa sendo `HEALTHY`.
+- A saída de `du -h` mostra 64 MiB de tamaño lóxico e 960 MiB de ocupación total para este ficheiro.
+
+**Capturas:**
+
+![Saída de fsck solicitando 15 réplicas](img/c3_replica15_fsck.png)
+
+![Saída de du -h solicitando 15 réplicas](img/c3_replica15_du.png)
+
+### 4.3. Restaurar a replicación a 3
+
+Para deixar o ficheiro coa configuración inicial, executouse:
+
+```bash
+hdfs dfs -setrep 3 e5/historico_16m.csv
+```
+
+A continuación, comprobouse o estado dos bloques:
+
+```bash
+hdfs fsck /user/xuedua072/e5/historico_16m.csv
+```
+
+E o espazo ocupado:
+
+```bash
+hdfs dfs -du -h e5
+```
+
+**Resultados:**
+
+- Os 5 bloques teñen novamente 3 réplicas.
+- A replicación media é 3.0.
+- Non hai bloques infrarreplicados nin sobrereplicados.
+- Non hai bloques perdidos nin corruptos.
+- O estado volve ser `HEALTHY`.
+- A ocupación total do ficheiro volve a 192 MiB.
+
+**Capturas:**
+
+![Saída de fsck coa replicación restaurada a 3](img/c3_replica3_fsck.png)
+
+![Saída de du -h coa replicación restaurada a 3](img/c3_replica3_du.png)
+
+### 4.4. Respostas ás preguntas
+
+**4. Que cambia en fsck coa replicación 2? Canto ocupa agora o ficheiro segundo du -h?**
+
+Ao reducir a replicación de 3 a 2, cada bloque pasa a ter dúas copias en lugar de tres. En `fsck`, a replicación media
+
+## Apartado 5. Sumas de verificación
+
+### 5.1. Checksum inicial dos ficheiros
+
+Executáronse os comandos:
+
+```bash
+hdfs dfs -checksum e5/historico_16m.csv e5/historico_def.csv
+```
+
+Os dous ficheiros teñen o mesmo contido, pero presentan resumos diferentes:
+
+- `historico_16m.csv`: `MD5-of-32768MD5-of-512CRC32C`
+- `historico_def.csv`: `MD5-of-0MD5-of-512CRC32C`
+
+**Captura 1.** Resultado dos checksums iniciais.
+
+<!-- Inserir captura aquí: img/c5_paso1_checksum.png -->
+
+### 5.2. Modo COMPOSITE_CRC
+
+Executouse:
+
+```bash
+hdfs dfs -D dfs.checksum.combine.mode=COMPOSITE_CRC -checksum e5/historico_16m.csv e5/historico_def.csv
+```
+
+Ambos os ficheiros devolveron o mesmo resumo: `5f0623f9`.
+
+**Captura 2.** Resultado con COMPOSITE_CRC.
+
+<!-- Inserir captura aquí: img/c5_paso2_composite_crc.png -->
+
+### 5.3. Copia dentro de HDFS
+
+Creouse unha copia con:
+
+```bash
+hdfs dfs -cp e5/historico_16m.csv e5/copia_nova.csv
+```
+
+A copia recibiu o tamaño de bloque predeterminado (128 MiB), mentres que o orixinal utiliza bloques de 16 MiB. Por iso os checksums MD5 convencionais son diferentes. Con `COMPOSITE_CRC`, ambos devolven `5f0623f9`.
+
+**Capturas 3 e 4.** Tamaños de bloque e comparación dos checksums.
+
+<!-- Inserir captura aquí: img/c5_paso3_bloques_checksum.png -->
+
+<!-- Inserir captura aquí: img/c5_paso3_composite_crc.png -->
+
+### 5.4. Modificación dun byte
+
+Creouse unha copia local e modificouse un byte na posición 1.000.000:
+
+```bash
+cp reservas_historico.csv modificado.csv
+printf 'X' | dd of=modificado.csv bs=1 seek=1000000 conv=notrunc
+```
+
+Subiuse a HDFS e comparáronse os checksums:
+
+```bash
+hdfs dfs -D dfs.blocksize=16m -put modificado.csv e5/modificado.csv
+hdfs dfs -checksum e5/historico_16m.csv e5/modificado.csv
+```
+
+Os resumos resultaron diferentes, malia que só se modificou un byte.
+
+**Captura 5.** Comparación do ficheiro orixinal e o modificado.
+
+<!-- Inserir captura aquí: img/c5_paso4_byte_modificado.png -->
+
+### 5.5. Descarga e comparación co orixinal
+
+Descargouse o ficheiro desde HDFS e comparouse localmente mediante SHA-256:
+
+```bash
+hdfs dfs -get e5/historico_16m.csv descargado.csv
+sha256sum reservas_historico.csv descargado.csv
+```
+
+Os dous ficheiros devolveron o mesmo resumo:
+
+`43647ae2b81ea1ba02edc3819f81327872c769db91e9ccf30d0677e2cff34891`
+
+Isto confirma que a descarga conserva exactamente o contido do orixinal.
+
+**Captura 6.** Comparación dos resumos SHA-256.
+
+<!-- Inserir captura aquí: img/c5_paso5_sha256.png -->
+
+### 5.6. Respostas ás preguntas
+
+**1. Por que os ficheiros do paso 1 teñen distinto resumo se o contido é o mesmo? Que significan os números?**
+
+Porque teñen tamaños de bloque diferentes. `32768` representa o número de fragmentos de 512 bytes que caben nun bloque de 16 MiB. O `0` corresponde ao caso dun único bloque. `512` indica o tamaño dos fragmentos sobre os que se calcula o CRC32C. MD5 combina os resumos dos bloques.
+
+**2. Que cambia no paso 2? Para que serve ese modo?**
+
+Empregase `COMPOSITE_CRC`, que permite comparar os datos sen que o tamaño dos bloques afecte ao resultado. Por iso os dous ficheiros devolven `5f0623f9`.
+
+**3. Por que a copia do paso 3 ten o mesmo resumo?**
+
+A copia conserva os mesmos datos, pero HDFS asignoulle bloques de 128 MiB en lugar de 16 MiB. Por iso os checksums MD5 son diferentes. O modo `COMPOSITE_CRC` confirma que o contido é idéntico.
+
+**4. Canto cambiou o resumo no paso 4, tendo en conta que só cambiaches un byte de 64 MB?**
+
+O resumo cambiou completamente, aínda que só se modificou un byte. Isto débese ao efecto avalanche dos algoritmos de resumo: unha pequena modificación nos datos provoca un cambio importante no resultado.
+
+**5. Por que hai que descargar o ficheiro para comparalo co orixinal, en lugar de comparar o checksum HDFS co SHA-256 local?**
+
+Porque HDFS utiliza CRC32C combinado con MD5, mentres que `sha256sum` utiliza SHA-256. Son algoritmos diferentes e os seus resultados non se poden comparar directamente. Ao descargar o ficheiro, podemos calcular SHA-256 nos dous e comprobar que coinciden.
+
+## Apartado 6. Preguntas
+
+**1. Por que, en Big Data, canto máis volume de datos hai máis importante é comprobar a súa integridade?**
+
+Porque ao aumentar o volume de datos tamén aumenta a probabilidade de que aparezan erros ou corrupcións. A integridade permite detectar modificacións ou perdas e garantir que os datos son fiables.
+
+**2. Quen comproba as sumas de verificación ao escribir un bloque, ao lelo e cando ninguén o le?**
+
+- **Ao escribir:** o DataNode calcula e almacena os checksums.
+- **Ao ler:** o cliente HDFS comproba que os datos recibidos coinciden coas sumas almacenadas.
+- **Cando ninguén o le:** o DataNode executa comprobacións periódicas en segundo plano mediante o *DataBlockScanner*.
+
+**3. Un cliente le un bloque e a súa suma de verificación non coincide. Describe paso a paso que fan o cliente e o NameNode.**
+
+1. O cliente detecta que o checksum é incorrecto.
+2. Informa o NameNode de que esa réplica está corrupta.
+3. O NameNode marca a réplica como corrupta e busca outra réplica válida.
+4. O cliente tenta ler o bloque desde outra réplica.
+5. O NameNode programa a creación dunha nova réplica para recuperar o nivel de replicación establecido.
+
+**4. Se todas as copias dun bloque estivesen corruptas, que mostraría fsck? Poderíase recuperar o ficheiro?**
+
+`fsck` indicaría que o bloque está corrupto e que non hai ningunha réplica válida. HDFS non podería reconstruír ese bloque por si só. Só se podería recuperar desde unha copia de seguridade ou outra fonte externa.
+
+**5. Garage e HDFS usan resumos e copias. Que papel ten cada unha das dúas cousas?**
+
+- **Os resumos (checksums):** detectan se os datos foron corrompidos ou modificados.
+- **As copias (réplicas):** permiten recuperar os datos cando unha réplica falla ou queda inaccesible.
+
+En resumo, os checksums detectan erros e as réplicas proporcionan tolerancia a fallos.
