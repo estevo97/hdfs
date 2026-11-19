@@ -454,7 +454,7 @@ hdfs dfs -du -h e5
 
 **Capturas:**
 
-![Saída de fsck solicitando 15 réplicas](img/replic32_fsck.png)
+![Saída de fsck solicitando 15 réplicas](img/replic32.png)
 
 **Resultados:**
 
