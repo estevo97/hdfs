@@ -524,7 +524,7 @@ Os dous ficheiros teñen o mesmo contido, pero presentan resumos diferentes:
 
 **Captura 1.** Resultado dos checksums iniciais.
 
-<!-- Inserir captura aquí: img/c5_paso1_checksum.png -->
+![Saída de fsck coa replicación restaurada a 3](img/sumas41.png)
 
 ### 5.2. Modo COMPOSITE_CRC
 
@@ -538,7 +538,7 @@ Ambos os ficheiros devolveron o mesmo resumo: `5f0623f9`.
 
 **Captura 2.** Resultado con COMPOSITE_CRC.
 
-<!-- Inserir captura aquí: img/c5_paso2_composite_crc.png -->
+![Saída de fsck coa replicación restaurada a 3](img/sumas42.png)
 
 ### 5.3. Copia dentro de HDFS
 
@@ -552,9 +552,7 @@ A copia recibiu o tamaño de bloque predeterminado (128 MiB), mentres que o orix
 
 **Capturas 3 e 4.** Tamaños de bloque e comparación dos checksums.
 
-<!-- Inserir captura aquí: img/c5_paso3_bloques_checksum.png -->
-
-<!-- Inserir captura aquí: img/c5_paso3_composite_crc.png -->
+![Saída de fsck coa replicación restaurada a 3](img/sumas43.png)
 
 ### 5.4. Modificación dun byte
 
@@ -576,7 +574,7 @@ Os resumos resultaron diferentes, malia que só se modificou un byte.
 
 **Captura 5.** Comparación do ficheiro orixinal e o modificado.
 
-<!-- Inserir captura aquí: img/c5_paso4_byte_modificado.png -->
+![Saída de fsck coa replicación restaurada a 3](img/sumas44.png)
 
 ### 5.5. Descarga e comparación co orixinal
 
@@ -595,7 +593,7 @@ Isto confirma que a descarga conserva exactamente o contido do orixinal.
 
 **Captura 6.** Comparación dos resumos SHA-256.
 
-<!-- Inserir captura aquí: img/c5_paso5_sha256.png -->
+![Saída de fsck coa replicación restaurada a 3](img/sumas45.png)
 
 ### 5.6. Respostas ás preguntas
 
