@@ -273,30 +273,7 @@ A primeira columna representa o tamaño lóxico de cada ficheiro, mentres que a 
 
 Cada ficheiro ocupa aproximadamente 64 MiB de datos e 192 MiB de almacenamento total coas tres réplicas.
 
-### 3.4. Respostas e conclusións
-
-**1. Cantos bloques ten cada ficheiro?**
-
-- `historico_16m.csv`: 5 bloques, catro completos e un parcial.
-- `historico_def.csv`: 1 bloque parcial.
-
-**2. Cantas réplicas ten cada bloque?**
-
-Os dous ficheiros teñen un factor de replicación de 3. As saídas de `fsck` confirman unha replicación media de 3 réplicas por bloque.
-
-**3. Están correctamente almacenados os ficheiros?**
-
-Si. Ambos presentan o estado `HEALTHY`, sen bloques corruptos, bloques desaparecidos nin réplicas ausentes.
-
-**4. Canto espazo ocupan en HDFS?**
-
-Cada ficheiro ocupa aproximadamente 64 MiB de tamaño lóxico e 192 MiB contabilizando as tres réplicas.
-
-**Conclusión:**
-
-Esta proba permite comprobar que o tamaño de bloque inflúe directamente no número de bloques necesarios para almacenar un ficheiro. Cun tamaño de bloque de 16 MiB, o ficheiro divídese en cinco bloques, mentres que co tamaño predeterminado de 128 MiB só necesita un. En ambos os casos, HDFS mantén tres réplicas de cada bloque e informa de que os datos están en bo estado.
-
-### 3.5. Capturas de pantalla
+### 3.4. Capturas de pantalla
 
 **Captura 4. Características dos ficheiros en HDFS**
 
@@ -340,7 +317,7 @@ A comparación dos dous ficheiros confirma que reducir o tamaño de bloque aumen
 
 ![Saídas dos comandos hdfs dfs -du -h e5](img/subir_tmbloques.png)
 
-### 3.4. Respostas ás cuestións do apartado
+### 3.5. Respostas ás cuestións do apartado
 
 **1. Cantos bloques ten cada ficheiro e de que tamaño é cada bloque? Por que o último pode ser máis pequeno?**
 
@@ -381,7 +358,7 @@ A segunda cifra representa o espazo total contabilizado en HDFS tendo en conta a
 
 Por iso, cada ficheiro ocupa aproximadamente 64 MiB de datos e 192 MiB de almacenamento total (64 MiB × 3 réplicas).
 
-### 3.5. Conclusión
+### 3.6. Conclusión
 
 A realización desta proba permitiu comprobar como HDFS divide os ficheiros en bloques segundo o tamaño configurado. Ao utilizar bloques de 16 MiB, o ficheiro divídese en cinco bloques, mentres que co tamaño predeterminado de 128 MiB só necesita un.
 
