@@ -583,13 +583,15 @@ Isto confirma que a descarga conserva exactamente o contido do orixinal.
 
 Porque teñen tamaños de bloque diferentes. `32768` representa o número de fragmentos de 512 bytes que caben nun bloque de 16 MiB. O `0` corresponde ao caso dun único bloque. `512` indica o tamaño dos fragmentos sobre os que se calcula o CRC32C. MD5 combina os resumos dos bloques.
 
+Cando só hai un bloque, como no caso do ficheiro `historico_def`, o campo `crcPerBlock` non se establece, e por iso aparece como 0. Se pola contra temos 5 bloques, sí se contan os fragmentos CRC por bloque.
+
 **2. Que cambia no paso 2? Para que serve ese modo?**
 
-Empregase `COMPOSITE_CRC`, que permite comparar os datos sen que o tamaño dos bloques afecte ao resultado. Por iso os dous ficheiros devolven `5f0623f9`.
+Empregase `COMPOSITE_CRC`, que permite comparar os datos sen que o tamaño dos bloques afecte ao resultado. Por iso os dous ficheiros devolven `5f0623f9`, porque son idénticos no contido.
 
 **3. Por que a copia do paso 3 ten o mesmo resumo?**
 
-A copia conserva os mesmos datos, pero HDFS asignoulle bloques de 128 MiB en lugar de 16 MiB. Por iso os checksums MD5 son diferentes. O modo `COMPOSITE_CRC` confirma que o contido é idéntico.
+A copia conserva os mesmos datos, pero HDFS asignoulle bloques de 128 MiB en lugar de 16 MiB. Por iso os checksums MD5 son diferentes (estamos no mesmo caso que no apartado 1, cando comparabamos o ficheiro con bloques de 16 MiB co ficheiro default). O modo `COMPOSITE_CRC` confirma que o contido é idéntico.
 
 **4. Canto cambiou o resumo no paso 4, tendo en conta que só cambiaches un byte de 64 MB?**
 
@@ -603,13 +605,13 @@ Porque HDFS utiliza CRC32C combinado con MD5, mentres que `sha256sum` utiliza SH
 
 **1. Por que, en Big Data, canto máis volume de datos hai máis importante é comprobar a súa integridade?**
 
-Porque ao aumentar o volume de datos tamén aumenta a probabilidade de que aparezan erros ou corrupcións. A integridade permite detectar modificacións ou perdas e garantir que os datos son fiables.
+Porque ao aumentar o volume de datos tamén aumenta a probabilidade de que aparezan erros ou corrupcións (cada 10^14 - 10^15 bits lidos hai de media un erro por bit ilexible); por outro lado, os datos almacenados en discos teñen data de caducidade porque estes se estragan co tempo. A integridade permite detectar modificacións ou perdas e garantir que os datos son fiables. Sempre se deben ter copias que permitan facer outras para cando ocorra unha perda por algún destes motivos.
 
 **2. Quen comproba as sumas de verificación ao escribir un bloque, ao lelo e cando ninguén o le?**
 
-- **Ao escribir:** o DataNode calcula e almacena os checksums.
-- **Ao ler:** o cliente HDFS comproba que os datos recibidos coinciden coas sumas almacenadas.
-- **Cando ninguén o le:** o DataNode executa comprobacións periódicas en segundo plano mediante o *DataBlockScanner*.
+- **Ao escribir:** O último DataNode da canalización: comproba os CRC antes de confirmar (se nese DataNode a suma dá ben, significa que nos anteriores tivo que dar ben).
+- **Ao ler:** O cliente: recalcula os CRC e compáraos cos datos que envía o DataNode.
+- **Cando ninguén o le:** Cada DataNode posúe un scanner que relé os seus bloques periódicamente.
 
 **3. Un cliente le un bloque e a súa suma de verificación non coincide. Describe paso a paso que fan o cliente e o NameNode.**
 
