@@ -322,12 +322,13 @@ A comparación dos dous ficheiros confirma que reducir o tamaño de bloque aumen
 **1. Cantos bloques ten cada ficheiro e de que tamaño é cada bloque? Por que o último pode ser máis pequeno?**
 
 O ficheiro `historico_16m.csv` ten 5 bloques:
-- Bloques 0, 1, 2 e 3: 16.777.216 bytes cada un (16 MiB).
-- Bloque 4: 61 bytes.
-
-O ficheiro `historico_def.csv` ten un único bloque de 67.108.925 bytes, xa que o tamaño de bloque predeterminado é de 134.217.728 bytes (128 MiB).
+- Bloques 0, 1, 2 e 3: 16.777.216 bytes cada un (16 MiB). Completos
+- Bloque 4: 61 bytes. Incompleto
 
 O último bloque pode ser máis pequeno porque HDFS non necesita completar o tamaño máximo do bloque. Garda nel unicamente os bytes que quedan por almacenar despois de encher os bloques anteriores.
+
+Por outra parte, o ficheiro `historico_def.csv` ten un único bloque de 67.108.925 bytes (64 MiB), xa que o tamaño de bloque predeterminado é de 134.217.728 bytes (128 MiB).
+
 
 **2. Para un bloque de `historico_16m.csv`, en que DataNodes están as súas copias? Están todas en DataNodes distintos?**
 
@@ -474,17 +475,19 @@ hdfs dfs -du -h e5
 - O estado volve ser `HEALTHY`.
 - A ocupación total do ficheiro volve a 192 MiB.
 
-**Capturas:**
-
-![Saída de fsck coa replicación restaurada a 3](img/c3_replica3_fsck.png)
-
-![Saída de du -h coa replicación restaurada a 3](img/c3_replica3_du.png)
-
 ### 4.4. Respostas ás preguntas
 
 **4. Que cambia en fsck coa replicación 2? Canto ocupa agora o ficheiro segundo du -h?**
 
-Ao reducir a replicación de 3 a 2, cada bloque pasa a ter dúas copias en lugar de tres. En `fsck`, a replicación media
+Ao reducir a replicación de 3 a 2, cada bloque pasa a ter dúas copias en lugar de tres. Se antes, con 3 réplicas, o ficheiro en fsck ocupaba 192 MiB, ao perder un tercio do seu almacenamento, pasa a ocupar 128 MiB. Isto podémolo ver ao final da segunda captura do apartado *4.1 Reducir a replicación a 2*.
+
+**5. Que mostra fsck ao pedir máis copias que DataNodes? Que significa under-replicated? Por que o estado segue sendo HEALTHY?**
+
+Mostra que foron solicitadas 15 réplicas pero que só se puideron completar 14 delas (*Target replicas is 15 but found 14 live replicas*) Polo tanto, ao ter unha réplica menos que as solicitadas cada bloque está infrarreplicado, como se mostra na primeira captura do apartado *4.2 Solicitar máis réplicas que data nodes dispoñibles*. O estado segue sendo healthy porque Hadoop pode funcionar perfectamente aínda que non se acade o número de réplicas obxectivo solicitado por un usuario (15 neste caso), sempre e cando non haxa problemas de integridade nos datos, como bloques corruptos ou perdidos.
+
+**6. Que faría o NameNode se un DataNode desaparecese e algúns bloques quedasen con menos copias das debidas?**
+
+Faría novas réplicas daqueles bloques afectados pola pérdida do DataNode no que estaban, intentando acadar o obxectivo que marca o factor de replicación. Por exemplo, se partimos de 3 réplicas e ao caer o Data Node os Bloques 0, 3 e 4 perden cada un unha réplica, xeraríase unhanova réplica destes bloques noutro DataNode que estivese dispoñible ata que non houbese ningún bloque infrarreplicado.
 
 ## Apartado 5. Sumas de verificación
 
